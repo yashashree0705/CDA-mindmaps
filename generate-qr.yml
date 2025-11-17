@@ -1,0 +1,40 @@
+name: Generate QR Code
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  generate-qr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      
+      - name: Install dependencies
+        run: |
+          pip install qrcode[pil]
+      
+      - name: Generate QR Code
+        run: |
+          python -c "
+          import qrcode
+          qr = qrcode.QRCode(version=1, box_size=10, border=5)
+          qr.add_data('https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/')
+          qr.make(fit=True)
+          img = qr.make_image(fill_color='black', back_color='white')
+          img.save('qr-code.png')
+          "
+      
+      - name: Commit QR Code
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add qr-code.png
+          git commit -m "Auto-generate QR code" || echo "No changes"
+          git push
